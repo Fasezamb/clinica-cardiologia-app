@@ -37,6 +37,10 @@ def show():
         
         with col1:
             medicos = db.get_all_medicos()
+            if not medicos:
+                st.warning("No hay médicos registrados en el sistema.")
+                st.stop()
+                
             medicos_dict = {f"{m['nombre']} - {m['especialidad']}": m['id'] for m in medicos}
             medico_seleccionado = st.selectbox("Seleccionar Médico", list(medicos_dict.keys()))
             medico_id = medicos_dict[medico_seleccionado]
