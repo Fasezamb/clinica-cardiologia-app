@@ -248,6 +248,46 @@ def show():
                 st.divider()
         else:
             st.info("No hay consultas previas registradas")
+            
+    # ==================== VERIFICACIÓN DE PACIENTE POTENCIAL ====================
+    if paciente['fecha_nacimiento'] == '1900-01-01':
+        st.error("⚠️ REGISTRO INCOMPLETO: Este paciente fue agendado rápidamente. Debe completar sus datos médicos antes de iniciar la consulta.")
+        
+        with st.form("completar_registro"):
+            st.subheader("Completar Perfil Médico")
+            col1, col2 = st.columns(2)
+            with col1:
+                nueva_fecha = st.date_input("Fecha de Nacimiento Real *", min_value=date(1900, 1, 1), max_value=date.today())
+                nuevo_sexo = st.selectbox("Sexo", ["Masculino", "Femenino"])
+            with col2:
+                nuevo_contacto = st.text_input("Teléfono de Contacto *", value=paciente['contacto'])
+                es_pediatrico = st.checkbox("Es paciente pediátrico (menor de 18 años)")
+                tutor_legal = st.text_input("Nombre del Tutor Legal (Si es pediátrico)", value=paciente.get('tutor_legal', ''))
+            
+            submit_actualizacion = st.form_submit_button("Guardar Datos y Habilitar Consulta", type="primary", use_container_width=True)
+            
+            if submit_actualizacion:
+                if nueva_fecha == date(1900, 1, 1):
+                    st.error("Debe ingresar la fecha de nacimiento real.")
+                elif not nuevo_contacto:
+                    st.error("El contacto es requerido.")
+                elif es_pediatrico and not tutor_legal:
+                    st.error("El tutor legal es requerido para pacientes pediátricos.")
+                else:
+                    db.update_paciente_registro(
+                        paciente_id=paciente['id'],
+                        fecha_nacimiento=nueva_fecha.strftime('%Y-%m-%d'),
+                        es_pediatrico=es_pediatrico,
+                        contacto=nuevo_contacto,
+                        tutor_legal=tutor_legal,
+                        sexo=nuevo_sexo
+                    )
+                    st.success("✅ Perfil completado exitosamente. Recargando para iniciar consulta...")
+                    st.rerun()
+        
+        # Detener la ejecución del resto del módulo hasta que se complete el registro
+        st.stop()
+    # =========================================================================
     
     st.markdown("---")
     st.subheader("Nueva Consulta")

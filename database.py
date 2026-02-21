@@ -248,6 +248,16 @@ def update_paciente_sexo(paciente_id, sexo):
     conn.commit()
     conn.close()
 
+def update_paciente_registro(paciente_id, fecha_nacimiento, es_pediatrico, contacto, tutor_legal, sexo):
+    conn = get_connection()
+    cursor = conn.cursor()
+    cursor.execute('''UPDATE pacientes 
+                      SET fecha_nacimiento = ?, es_pediatrico = ?, contacto = ?, tutor_legal = ?, sexo = ?
+                      WHERE id = ?''', 
+                   (fecha_nacimiento, es_pediatrico, contacto, tutor_legal, sexo, paciente_id))
+    conn.commit()
+    conn.close()
+
 def create_cita(paciente_id, medico_id, fecha_hora):
     conn = get_connection()
     cursor = conn.cursor()

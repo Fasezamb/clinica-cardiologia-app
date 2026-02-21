@@ -105,55 +105,93 @@ def show():
     with tab2:
         st.subheader("Agendar Nueva Cita")
         
+        # Opciones para paciente
+        tipo_paciente = st.radio("¿El paciente ya está en el sistema?", ["Paciente Existente", "Nuevo Paciente (Potencial)"], horizontal=True)
+        
         with st.form("nueva_cita"):
-            # Seleccionar paciente
-            pacientes = db.get_all_pacientes()
-            if not pacientes:
-                st.warning("No hay pacientes registrados. Por favor registre un paciente primero.")
-                st.form_submit_button("Guardar", disabled=True)
-                return
+            paciente_id = None
             
-            pacientes_dict = {f"{p['nombre']} (ID: {p['id']})": p['id'] for p in pacientes}
-            paciente_seleccionado = st.selectbox("Paciente *", list(pacientes_dict.keys()))
-            paciente_id = pacientes_dict[paciente_seleccionado]
-            
+            if tipo_paciente == "Paciente Existente":
+                pacientes = db.get_all_pacientes()
+                if not pacientes:
+                    st.warning("No hay pacientes registrados en el sistema.")
+                    st.form_submit_button("Guardar (Deshabilitado)", disabled=True)
+                else:
+                    pacientes_dict = {f"{p['nombre']} (ID: {p['id']})": p['id'] for p in pacientes}
+                    paciente_seleccionado = st.selectbox("Paciente Existente *", list(pacientes_dict.keys()))
+                    paciente_id = pacientes_dict[paciente_seleccionado]
+            else:
+                st.info("Crear paciente rápido para agendar.")
+                nuevo_nombre = st.text_input("Nombre Completo *")
+                nuevo_contacto = st.text_input("Teléfono de Contacto *")
+                
             # Seleccionar médico
             medicos = db.get_all_medicos()
-            medicos_dict = {f"{m['nombre']} - {m['especialidad']}": m['id'] for m in medicos}
-            medico_seleccionado = st.selectbox("Médico *", list(medicos_dict.keys()))
-            medico_id = medicos_dict[medico_seleccionado]
-            
-            # Fecha y hora
-            col1, col2 = st.columns(2)
-            with col1:
-                fecha_cita = st.date_input("Fecha *", min_value=date.today())
-            with col2:
-                hora_cita = st.time_input("Hora *", value=datetime.now().time())
-            
-            submitted = st.form_submit_button("📅 Agendar Cita", use_container_width=True)
-            
-            if submitted:
-                # Combinar fecha y hora
-                fecha_hora = datetime.combine(fecha_cita, hora_cita).strftime('%Y-%m-%d %H:%M:%S')
+            if not medicos:
+                st.warning("Debe registrar al menos un médico primero para poder agendar citas.")
+                st.form_submit_button("Guardar (Deshabilitado)", disabled=True)
+            else:
+                medicos_dict = {f"{m['nombre']} - {m['especialidad']}": m['id'] for m in medicos}
+                medico_seleccionado = st.selectbox("Médico *", list(medicos_dict.keys()))
+                medico_id = medicos_dict[medico_seleccionado]
                 
-                # Verificar si ya existe una cita en ese horario
-                citas_existentes = db.get_citas_by_medico_fecha(medico_id, fecha_cita.strftime('%Y-%m-%d'))
-                conflicto = False
+                # Fecha y hora
+                col1, col2 = st.columns(2)
+                with col1:
+                    fecha_cita = st.date_input("Fecha *", min_value=date.today())
+                with col2:
+                    hora_cita = st.time_input("Hora *", value=datetime.now().time())
                 
-                for cita in citas_existentes:
-                    if cita['fecha_hora'] == fecha_hora:
-                        conflicto = True
-                        break
+                submitted = st.form_submit_button("📅 Agendar Cita", use_container_width=True)
                 
-                if conflicto:
-                    st.error("⚠️ Ya existe una cita para este médico en este horario")
-                else:
-                    try:
-                        cita_id = db.create_cita(paciente_id, medico_id, fecha_hora)
-                        st.success(f"✅ Cita agendada exitosamente (ID: {cita_id})")
-                        st.balloons()
-                    except Exception as e:
-                        st.error(f"Error al agendar cita: {str(e)}")
+                if submitted:
+                    # Validar datos de nuevo paciente
+                    if tipo_paciente == "Nuevo Paciente (Potencial)":
+                        if not nuevo_nombre or not nuevo_contacto:
+                            st.error("⚠️ El Nombre y Contacto son obligatorios para pacientes nuevos.")
+                            st.stop()
+                        
+                        # Crear paciente potencial con fecha 1900-01-01 para indicar perfil incompleto
+                        try:
+                            paciente_id = db.create_paciente(
+                                nombre=nuevo_nombre, 
+                                fecha_nacimiento='1900-01-01', 
+                                es_pediatrico=False, 
+                                contacto=nuevo_contacto, 
+                                tutor_legal=''
+                            )
+                        except Exception as e:
+                            st.error(f"Error creando paciente potencial: {e}")
+                            st.stop()
+                    
+                    # Prevent scheduling if no valid patient ID is assigned
+                    if not paciente_id:
+                        st.error("Error identificando al paciente.")
+                        st.stop()
+
+                    # Combinar fecha y hora
+                    fecha_hora = datetime.combine(fecha_cita, hora_cita).strftime('%Y-%m-%d %H:%M:%S')
+                    
+                    # Verificar si ya existe una cita en ese horario
+                    citas_existentes = db.get_citas_by_medico_fecha(medico_id, fecha_cita.strftime('%Y-%m-%d'))
+                    conflicto = False
+                    
+                    for cita in citas_existentes:
+                        if cita['fecha_hora'] == fecha_hora:
+                            conflicto = True
+                            break
+                    
+                    if conflicto:
+                        st.error("⚠️ Ya existe una cita para este médico en este horario")
+                    else:
+                        try:
+                            cita_id = db.create_cita(paciente_id, medico_id, fecha_hora)
+                            st.success(f"✅ Cita agendada exitosamente (ID: {cita_id})")
+                            st.balloons()
+                            if tipo_paciente == "Nuevo Paciente (Potencial)":
+                                st.info("Recuerde completar los datos médicos del paciente el día de la consulta.")
+                        except Exception as e:
+                            st.error(f"Error al agendar cita: {str(e)}")
     
     # ==================== TAB 3: Estadísticas ====================
     with tab3:
