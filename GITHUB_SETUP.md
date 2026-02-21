@@ -23,22 +23,34 @@
    - GitHub mostrará instrucciones
    - Copiar el URL que aparece (formato: `https://github.com/tu-usuario/clinica-cardiologia-app.git`)
 
-## Paso 2: Conectar Repositorio Local con GitHub
+## Paso 2: Conectar e Identificarse con un Token (PAT)
 
-Ejecutar estos comandos en la terminal (desde la carpeta del proyecto):
+Desde 2021, GitHub **no acepta tu contraseña normal** en la terminal. Debes usar un **Personal Access Token (PAT)**.
 
-\`\`\`bash
-# Configurar tu nombre y email (solo la primera vez)
-git config --global user.name "Tu Nombre"
-git config --global user.email "tu-email@ejemplo.com"
+### A. Generar el Token en GitHub
+1. Entra directamente aquí: **[https://github.com/settings/tokens](https://github.com/settings/tokens)**
+   *(O ve a Settings -> Baja hasta el final -> **Developer settings** -> Personal access tokens -> Tokens classic)*
+2. Haz clic en **Generate new token** -> **Generate new token (classic)**.
+3. Ponle un nombre (ej: `mac-cardio-app`).
+4. En **Select scopes**, marca la casilla **repo** (esto es fundamental).
+5. Haz clic al final en **Generate token**.
+6. **⚠️ COPIA EL TOKEN AHORA.** No podrás volver a verlo.
 
-# Conectar con GitHub (reemplazar URL con el tuyo)
+### B. Conectar y Subir el Código
+Ejecuta estos comandos en la terminal:
+
+```bash
+# Conectar con GitHub (reemplazar TU-USUARIO con Fasezamb)
 git remote add origin https://github.com/TU-USUARIO/clinica-cardiologia-app.git
 
-# Subir el código a GitHub
+# Subir el código
 git branch -M main
 git push -u origin main
-\`\`\`
+```
+
+**Cuando la terminal te pida:**
+- **Username:** Escribe tu usuario (ej: `Fasezamb`)
+- **Password:** **PEGA EL TOKEN** que copiaste (no verás nada mientras pegas, es normal).
 
 ## Paso 3: Desplegar en Streamlit Cloud
 
