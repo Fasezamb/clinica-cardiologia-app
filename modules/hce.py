@@ -179,7 +179,30 @@ def show():
     # Seleccionar paciente
     pacientes = db.get_all_pacientes()
     if not pacientes:
-        st.warning("No hay pacientes registrados. Por favor registre un paciente primero.")
+        st.warning("No hay pacientes registrados. Por favor registre su primer paciente.")
+        with st.form("registro_primer_paciente"):
+            st.subheader("Registrar Nuevo Paciente")
+            nombre = st.text_input("Nombre Completo *")
+            fecha_nacimiento = st.date_input("Fecha de Nacimiento *", min_value=date(1900, 1, 1), max_value=date.today())
+            sexo = st.selectbox("Sexo", ["Masculino", "Femenino"])
+            es_pediatrico = st.checkbox("Es paciente pediátrico (menor de 18 años)")
+            contacto = st.text_input("Teléfono de Contacto *")
+            tutor_legal = st.text_input("Nombre del Tutor Legal (Si es pediátrico)")
+            
+            submit_paciente = st.form_submit_button("Registrar Paciente", type="primary")
+            
+            if submit_paciente:
+                if not nombre or not contacto:
+                    st.error("Nombre y contacto son requeridos.")
+                elif es_pediatrico and not tutor_legal:
+                    st.error("El tutor legal es requerido para pacientes pediátricos.")
+                else:
+                    db.create_paciente(nombre, fecha_nacimiento.strftime('%Y-%m-%d'), es_pediatrico, contacto, tutor_legal)
+                    # Actualizar sexo directamente en la base de datos para este primer paciente
+                    nuevo_id = db.get_all_pacientes()[-1]['id']
+                    db.update_paciente_sexo(nuevo_id, sexo)
+                    st.success("Paciente registrado exitosamente. Recargando la página...")
+                    st.rerun()
         return
     
     # Pacientes en espera (UX Improvement)
